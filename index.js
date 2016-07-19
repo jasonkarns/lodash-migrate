@@ -31,7 +31,7 @@ function wrapLodash(oldDash, newDash) {
   // Wrap methods.
   _.each([unwrapped, wrapped], function(names, index) {
     oldDash.mixin(_.transform(names, function(source, name) {
-      source[name] = wrapMethod(oldDash, newDash, name);
+      source[name] = wrapMethod(name);
     }, {}), !!index);
   });
 
@@ -55,7 +55,7 @@ function wrapLodash(oldDash, newDash) {
   // Wrap chain sequence methods.
   _.each(listing.seqFuncs, function(name) {
     if (oldDash.prototype[name]) {
-      oldDash.prototype[name] = wrapMethod(oldDash, newDash, name);
+      oldDash.prototype[name] = wrapMethod(name);
     }
   });
 
@@ -72,17 +72,10 @@ function wrapLodash(oldDash, newDash) {
  * @param {string} name The name of the lodash method to wrap.
  * @returns {Function} Returns the new wrapped method.
  */
-function wrapMethod(oldDash, newDash, name) {
-  var method = new Method(name),
-      ignoreResult = _.includes(listing.ignored.result, name),
-      isSeqFunc = _.includes(listing.seqFuncs, name);
+function wrapMethod(name) {
+  var method = new Method(name);
 
-  var newFunc = isSeqFunc ? newDash.prototype[method.newName] : newDash[method.newName],
-      newVer  = newDash.VERSION,
-      oldFunc = isSeqFunc ? oldDash.prototype[name] : oldDash[name],
-      oldVer  = oldDash.VERSION;
-
-  return _.wrap(oldFunc, _.rest(function(oldFunc, args) {
+  return _.wrap(method.oldFunc, _.rest(function(oldFunc, args) {
     var that = this;
 
     var data = {
@@ -94,19 +87,21 @@ function wrapMethod(oldDash, newDash, name) {
       ),
       'oldData': {
         'name': name,
-        'version': oldVer
+        'version': method.oldVersion
       },
       'newData': {
         'name': method.newName,
-        'version': newVer
+        'version': method.newVersion
       }
     };
 
     method.warnRename();
 
-    if (ignoreResult) {
+    if (method.ignoreDifferences) {
       return oldFunc.apply(that, args);
     }
+
+
     var argsClone = util.cloneDeep(args),
         isIteration = mapping.iteration[name];
 
@@ -115,7 +110,7 @@ function wrapMethod(oldDash, newDash, name) {
       argsClone[1] = _.identity;
     }
     var oldResult = oldFunc.apply(that, args),
-        newResult = _.attempt(function() { return newFunc.apply(that, argsClone); });
+        newResult = _.attempt(function() { return method.newFunc.apply(that, argsClone); });
 
     if (util.isComparable(oldResult)
           ? !util.isEqual(oldResult, newResult)
@@ -133,22 +128,32 @@ function wrapMethod(oldDash, newDash, name) {
 /*----------------------------------------------------------------------------*/
 
 function Method(name) {
-  this.wasRenamed = mapping.rename[name];
-  this.ignoreRename = _.includes(listing.ignored.rename, name);
+  this.name = name;
   this.oldName = name;
   this.newName = mapping.rename[name] || name;
+
+  var isSeqFunc = _.includes(listing.seqFuncs, name);
+  this.oldFunc = isSeqFunc ? this.oldDash.prototype[name] : this.oldDash[name];
+  this.newFunc = isSeqFunc ? this.newDash.prototype[this.newName] : this.newDash[this.newName];
+
+  this.wasRenamed = mapping.rename[name];
+  this.ignoreRename = _.includes(listing.ignored.rename, name);
+
+  this.ignoreDifferences = _.includes(listing.ignored.result, name);
 }
 
 Method.compare = function(oldDash, newDash) {
+  this.prototype.oldDash = oldDash;
+  this.prototype.newDash = newDash;
   this.prototype.oldVersion = oldDash.VERSION;
   this.prototype.newVersion = newDash.VERSION;
-}
+};
 
 Method.prototype.warnRename = function() {
   if (this.wasRenamed && !this.ignoreRename) {
     config.log(config.renameMessage(this));
   }
-}
+};
 
 wrapLodash(old, _);
 
