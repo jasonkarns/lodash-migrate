@@ -26,6 +26,8 @@ function wrapLodash(oldDash, newDash) {
       wrapped = _.difference(methodNames, unwrapped, listing.seqFuncs),
       oldRunInContext = oldDash.runInContext;
 
+  Method.compare(oldDash, newDash);
+
   // Wrap methods.
   _.each([unwrapped, wrapped], function(names, index) {
     oldDash.mixin(_.transform(names, function(source, name) {
@@ -71,12 +73,11 @@ function wrapLodash(oldDash, newDash) {
  * @returns {Function} Returns the new wrapped method.
  */
 function wrapMethod(oldDash, newDash, name) {
-  var ignoreRename = _.includes(listing.ignored.rename, name),
+  var method = new Method(name),
       ignoreResult = _.includes(listing.ignored.result, name),
       isSeqFunc = _.includes(listing.seqFuncs, name);
 
-  var newName = mapping.rename[name] || name,
-      newFunc = isSeqFunc ? newDash.prototype[newName] : newDash[newName],
+  var newFunc = isSeqFunc ? newDash.prototype[method.newName] : newDash[method.newName],
       newVer  = newDash.VERSION,
       oldFunc = isSeqFunc ? oldDash.prototype[name] : oldDash[name],
       oldVer  = oldDash.VERSION;
@@ -96,14 +97,13 @@ function wrapMethod(oldDash, newDash, name) {
         'version': oldVer
       },
       'newData': {
-        'name': newName,
+        'name': method.newName,
         'version': newVer
       }
     };
 
-    if (!ignoreRename && mapping.rename[name]) {
-      config.log(config.renameMessage(data));
-    }
+    method.warnRename();
+
     if (ignoreResult) {
       return oldFunc.apply(that, args);
     }
@@ -131,6 +131,24 @@ function wrapMethod(oldDash, newDash, name) {
 }
 
 /*----------------------------------------------------------------------------*/
+
+function Method(name) {
+  this.wasRenamed = mapping.rename[name];
+  this.ignoreRename = _.includes(listing.ignored.rename, name);
+  this.oldName = name;
+  this.newName = mapping.rename[name] || name;
+}
+
+Method.compare = function(oldDash, newDash) {
+  this.prototype.oldVersion = oldDash.VERSION;
+  this.prototype.newVersion = newDash.VERSION;
+}
+
+Method.prototype.warnRename = function() {
+  if (this.wasRenamed && !this.ignoreRename) {
+    config.log(config.renameMessage(this));
+  }
+}
 
 wrapLodash(old, _);
 
