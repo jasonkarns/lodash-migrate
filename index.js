@@ -67,8 +67,6 @@ function wrapLodash(oldDash, newDash) {
  * and `newDash` and logs a warning for unequal results.
  *
  * @private
- * @param {Function} oldDash The old lodash function.
- * @param {Function} newDash The new lodash function.
  * @param {string} name The name of the lodash method to wrap.
  * @returns {Function} Returns the new wrapped method.
  */
@@ -76,52 +74,13 @@ function wrapMethod(name) {
   var method = new Method(name);
 
   return _.wrap(method.oldFunc, _.rest(function(oldFunc, args) {
-    var that = this;
     var invocation = new Invocation(method, args, this);
-
-    var data = {
-      'name': name,
-      'args': util.truncate(
-        util.inspect(args)
-          .match(/^\[\s*([\s\S]*?)\s*\]$/)[1]
-          .replace(/\n */g, ' ')
-      ),
-      'oldData': {
-        'name': name,
-        'version': method.oldVersion
-      },
-      'newData': {
-        'name': method.newName,
-        'version': method.newVersion
-      }
-    };
 
     method.warnRename();
 
-    if (method.ignoreDifferences) {
-      return invocation.oldResults;
-    }
-
-    var argsClone = util.cloneDeep(args),
-        isIteration = mapping.iteration[name];
-
-    if (isIteration &&
-        !(isIteration.mappable && reHasReturn.test(argsClone[1]))) {
-      argsClone[1] = _.identity;
-    }
-    var oldResult = oldFunc.apply(that, args),
-        newResult = _.attempt(function() { return method.newFunc.apply(that, argsClone); });
-
-    if (util.isComparable(oldResult)
-          ? !util.isEqual(oldResult, newResult)
-          : util.isComparable(newResult)
-        ) {
-      config.log(config.migrateMessage(_.merge(data, {
-        'oldData': { 'result': util.truncate(util.inspect(oldResult)) },
-        'newData': { 'result': util.truncate(util.inspect(newResult)) }
-      })));
-    }
-    return oldResult;
+    return _.tap(invocation.oldResult, function() {
+      invocation.warnDifferences();
+    });
   }));
 }
 
@@ -158,13 +117,45 @@ Method.prototype.warnRename = function() {
 function Invocation(method, args, context) {
   this.method = method;
   this.args = args;
-  this.context = context;
 
-  if (this.method.ignoreDifferences) {
-    this.oldResults = this.method.oldFunc.apply(this.context, this.args);
-  } else {
+  if (!this.method.ignoreDifferences) {
+    var argsClone = util.cloneDeep(args),
+      isIteration = mapping.iteration[method.name];
+
+    if (isIteration &&
+      !(isIteration.mappable && reHasReturn.test(argsClone[1]))) {
+      argsClone[1] = _.identity;
+    }
+
+    this.newResult = _.attempt(function() { return method.newFunc.apply(context, argsClone); });
   }
+
+  this.oldResult = method.oldFunc.apply(context, args);
 }
+
+Invocation.prototype.warnDifferences = function() {
+  if (!this.method.ignoreDifferences && this.resultsDiffer()) {
+    config.log(config.migrateMessage(this.forDisplay()));
+  }
+};
+
+Invocation.prototype.resultsDiffer = function() {
+  return util.isComparable(this.oldResult)
+    ? !util.isEqual(this.oldResult, this.newResult)
+    : util.isComparable(this.newResult);
+};
+
+Invocation.prototype.forDisplay = function() {
+  return _.merge({}, this.method, {
+    args: util.truncate(
+      util.inspect(this.args)
+      .match(/^\[\s*([\s\S]*?)\s*\]$/)[1]
+      .replace(/\n */g, ' ')
+    ),
+    oldResult: util.truncate(util.inspect(this.oldResult)),
+    newResult: util.truncate(util.inspect(this.newResult))
+  });
+};
 
 wrapLodash(old, _);
 
