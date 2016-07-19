@@ -77,6 +77,7 @@ function wrapMethod(name) {
 
   return _.wrap(method.oldFunc, _.rest(function(oldFunc, args) {
     var that = this;
+    var invocation = new Invocation(method, args, this);
 
     var data = {
       'name': name,
@@ -98,9 +99,8 @@ function wrapMethod(name) {
     method.warnRename();
 
     if (method.ignoreDifferences) {
-      return oldFunc.apply(that, args);
+      return invocation.oldResults;
     }
-
 
     var argsClone = util.cloneDeep(args),
         isIteration = mapping.iteration[name];
@@ -154,6 +154,17 @@ Method.prototype.warnRename = function() {
     config.log(config.renameMessage(this));
   }
 };
+
+function Invocation(method, args, context) {
+  this.method = method;
+  this.args = args;
+  this.context = context;
+
+  if (this.method.ignoreDifferences) {
+    this.oldResults = this.method.oldFunc.apply(this.context, this.args);
+  } else {
+  }
+}
 
 wrapLodash(old, _);
 
