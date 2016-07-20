@@ -118,7 +118,9 @@ function Invocation(method, args, context) {
   this.method = method;
   this.args = args;
 
-  if (!this.method.ignoreDifferences) {
+  if (this.method.ignoreDifferences) {
+    this.oldResult = method.oldFunc.apply(context, args);
+  } else {
     var argsClone = util.cloneDeep(args),
       isIteration = mapping.iteration[method.name];
 
@@ -127,10 +129,9 @@ function Invocation(method, args, context) {
       argsClone[1] = _.identity;
     }
 
+    this.oldResult = method.oldFunc.apply(context, args);
     this.newResult = _.attempt(function() { return method.newFunc.apply(context, argsClone); });
   }
-
-  this.oldResult = method.oldFunc.apply(context, args);
 }
 
 Invocation.prototype.warnDifferences = function() {
