@@ -417,8 +417,9 @@ QUnit.module('logging');
     assert.expect(2);
 
     var paths = [
-      '../index.js',
-      '../lib/util.js'
+      '../index',
+      '../lib/invocation',
+      '../lib/util'
     ];
 
     function clear(id) {
@@ -430,14 +431,14 @@ QUnit.module('logging');
 
     global.document = {};
     paths.forEach(clear);
-    require('../index.js');
+    require('../index');
 
     old.functions(new Foo('c'));
     assert.ok(!reColor.test(_.last(logs)));
 
     delete global.document;
     paths.forEach(clear);
-    require('../index.js');
+    require('../index');
   });
 }());
 
