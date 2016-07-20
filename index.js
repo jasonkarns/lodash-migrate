@@ -3,12 +3,11 @@
 var _ = require('./lodash'),
     old = require('lodash');
 
-var listing = require('./lib/listing'),
-    mapping = require('./lib/mapping'),
-    util = require('./lib/util');
+var Method = require('./lib/method'),
+    Invocation = require('./lib/invocation'),
+    listing = require('./lib/listing');
 
-var config = _.clone(require('./lib/default-config')),
-    reHasReturn = /\breturn\b/;
+var config = _.clone(require('./lib/default-config'));
 
 /*----------------------------------------------------------------------------*/
 
@@ -85,78 +84,6 @@ function wrapMethod(name) {
 }
 
 /*----------------------------------------------------------------------------*/
-
-function Method(name) {
-  this.name = name;
-  this.oldName = name;
-  this.newName = mapping.rename[name] || name;
-
-  var isSeqFunc = _.includes(listing.seqFuncs, name);
-  this.oldFunc = isSeqFunc ? this.oldDash.prototype[name] : this.oldDash[name];
-  this.newFunc = isSeqFunc ? this.newDash.prototype[this.newName] : this.newDash[this.newName];
-
-  this.wasRenamed = mapping.rename[name];
-  this.ignoreRename = _.includes(listing.ignored.rename, name);
-
-  this.ignoreDifferences = _.includes(listing.ignored.result, name);
-}
-
-Method.compare = function(oldDash, newDash) {
-  this.prototype.oldDash = oldDash;
-  this.prototype.newDash = newDash;
-  this.prototype.oldVersion = oldDash.VERSION;
-  this.prototype.newVersion = newDash.VERSION;
-};
-
-Method.prototype.warnRename = function() {
-  if (this.wasRenamed && !this.ignoreRename) {
-    config.log(config.renameMessage(this));
-  }
-};
-
-function Invocation(method, args, context) {
-  this.method = method;
-  this.args = args;
-
-  if (this.method.ignoreDifferences) {
-    this.oldResult = method.oldFunc.apply(context, args);
-  } else {
-    var argsClone = util.cloneDeep(args),
-      isIteration = mapping.iteration[method.name];
-
-    if (isIteration &&
-      !(isIteration.mappable && reHasReturn.test(argsClone[1]))) {
-      argsClone[1] = _.identity;
-    }
-
-    this.oldResult = method.oldFunc.apply(context, args);
-    this.newResult = _.attempt(function() { return method.newFunc.apply(context, argsClone); });
-  }
-}
-
-Invocation.prototype.warnDifferences = function() {
-  if (!this.method.ignoreDifferences && this.resultsDiffer()) {
-    config.log(config.migrateMessage(this.forDisplay()));
-  }
-};
-
-Invocation.prototype.resultsDiffer = function() {
-  return util.isComparable(this.oldResult)
-    ? !util.isEqual(this.oldResult, this.newResult)
-    : util.isComparable(this.newResult);
-};
-
-Invocation.prototype.forDisplay = function() {
-  return _.merge({}, this.method, {
-    args: util.truncate(
-      util.inspect(this.args)
-      .match(/^\[\s*([\s\S]*?)\s*\]$/)[1]
-      .replace(/\n */g, ' ')
-    ),
-    oldResult: util.truncate(util.inspect(this.oldResult)),
-    newResult: util.truncate(util.inspect(this.newResult))
-  });
-};
 
 wrapLodash(old, _);
 

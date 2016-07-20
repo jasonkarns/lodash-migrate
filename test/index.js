@@ -6,6 +6,8 @@ var _ = require('../lodash'),
     QUnit = require('qunit-extras'),
     util = require('../lib/util');
 
+var defaultConfig = require('../lib/default-config');
+
 var logs = [],
     reColor = /\x1b\[\d+m/g;
 
@@ -91,8 +93,8 @@ QUnit.module('logging method');
 
     old.max(objects, 'b');
 
-    // Restore default configuration.
-    require('../index')(require('../lib/default-config'));
+    // Restore default configuration
+    require('../index')(defaultConfig);
   });
 }());
 
