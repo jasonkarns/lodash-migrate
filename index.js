@@ -75,7 +75,9 @@ function wrapMethod(name) {
   return _.wrap(method.oldFunc, _.rest(function(oldFunc, args) {
     var invocation = new Invocation(method, args, this);
 
-    method.warnRename();
+    method.warnRename(function(data) {
+      config.log(config.renameMessage(data));
+    });
 
     return _.tap(invocation.oldResult, function() {
       invocation.warnDifferences();
