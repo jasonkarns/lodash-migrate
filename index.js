@@ -80,7 +80,9 @@ function wrapMethod(name) {
     });
 
     return _.tap(invocation.oldResult, function() {
-      invocation.warnDifferences();
+      invocation.warnDifferences(function(data){
+        config.log(config.migrateMessage(data));
+      });
     });
   }));
 }
