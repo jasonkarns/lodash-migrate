@@ -5,11 +5,9 @@ var configure = require('../index');
 var _ = require('../lodash'),
   old = require('lodash'),
   mapping = require('../lib/mapping'),
-  QUnit = require('qunit-extras'),
-  util = require('../lib/util');
+  QUnit = require('qunit-extras');
 
-var defaultConfig = require('../lib/default-config');
-
+// shared closure variables for introspecting rename and migrate warnings
 var renames = [], migrations = [];
 
 /*----------------------------------------------------------------------------*/
@@ -55,8 +53,8 @@ QUnit.assert.migration = function(name){
 
 /*----------------------------------------------------------------------------*/
 
-
 QUnit.begin(function() {
+  // override default configuration with test stubs
   configure({
     // mute the console output
     log: _.noop,
