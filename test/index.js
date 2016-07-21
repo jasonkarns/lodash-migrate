@@ -56,16 +56,21 @@ QUnit.assert.migration = function(name){
 /*----------------------------------------------------------------------------*/
 
 
-configure({
-  log: _.noop,
+QUnit.begin(function() {
+  configure({
+    // mute the console output
+    log: _.noop,
 
-  renameMessage: function(rename){
-    renames.push(rename.oldName + ' → ' + rename.newName);
-  },
+    // store renames for asserting
+    renameMessage: function(rename){
+      renames.push(rename.oldName + ' → ' + rename.newName);
+    },
 
-  migrateMessage: function(migration){
-    migrations.push(migration.name);
-  }
+    // store migrations for asserting
+    migrateMessage: function(migration){
+      migrations.push(migration.name);
+    }
+  });
 });
 
 QUnit.testStart(function() {
