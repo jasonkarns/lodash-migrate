@@ -10,9 +10,6 @@ var _ = require('../lodash'),
 
 var defaultConfig = require('../lib/default-config');
 
-var logs = [],
-  reColor = /\x1b\[\d+m/g;
-
 var renames = [], migrations = [];
 
 /*----------------------------------------------------------------------------*/
@@ -350,30 +347,42 @@ QUnit.module('logging');
     assert.noWarnings();
   });
 
-  QUnit.test('should not include ANSI escape codes in logs when in the browser', function(assert) {
-    var paths = [
-      '../index',
-      '../lib/invocation',
-      '../lib/util'
-    ];
+  QUnit.module('default migration template', function(){
+    var reColor = /\x1b\[\d+m/g;
 
-    function clear(id) {
-      delete require.cache[require.resolve(id)];
-    }
+    QUnit.test('should include ANSI escape codes', function(assert) {
+      var config = require('../lib/default-config');
 
-    old.functions(new Foo('b'));
-    assert.ok(reColor.test(_.last(logs)));
+      assert.ok(reColor.test(config.migrateTemplate({
+        name: 'fake', args: [1,2,3],
+        oldVersion: 'OLD', newVersion: 'NEW',
+        oldResult: 'old results', newResult: 'new results'
+      })));
+    });
 
-    global.document = {};
-    paths.forEach(clear);
-    require('../index');
+    QUnit.module('in browser', {
+      beforeEach: function(){
+        [ '../lib/default-config', '../lib/util' ].forEach(function clearRequireCache(id) {
+          delete require.cache[require.resolve(id)];
+        });
 
-    old.functions(new Foo('c'));
-    assert.ok(!reColor.test(_.last(logs)));
+        global.document = {}; // pretend in browser
+      },
+      afterEach: function(){
+        delete global.document;
+      }
+    }, function(){
 
-    delete global.document;
-    paths.forEach(clear);
-    require('../index');
+      QUnit.test('should not include ANSI escape codes', function(assert) {
+        var config = require('../lib/default-config');
+
+        assert.notOk(reColor.test(config.migrateTemplate({
+          name: 'fake', args: [1,2,3],
+          oldVersion: 'OLD', newVersion: 'NEW',
+          oldResult: 'old results', newResult: 'new results'
+        })));
+      });
+    });
   });
 }());
 
