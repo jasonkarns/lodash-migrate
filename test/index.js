@@ -1,5 +1,7 @@
 'use strict';
 
+var configure = require('../index');
+
 var _ = require('../lodash'),
   old = require('lodash'),
   mapping = require('../lib/mapping'),
@@ -11,7 +13,48 @@ var defaultConfig = require('../lib/default-config');
 var logs = [],
   reColor = /\x1b\[\d+m/g;
 
+var renames = [], migrations = [];
+
 /*----------------------------------------------------------------------------*/
+
+QUnit.assert.noWarnings = function(){
+  this.noRenames();
+  this.noMigrations();
+};
+
+QUnit.assert.noRenames = function(){
+  this.pushResult({
+    result: _.isEmpty(renames),
+    message: 'Unexpected Renames: ' + renames
+  });
+};
+
+QUnit.assert.noMigrations = function(){
+  this.pushResult({
+    result: _.isEmpty(migrations),
+    message: 'Unexpected Migrations: ' + migrations
+  });
+};
+
+QUnit.assert.rename = function(oldName){
+  var expected = oldName + ' → ' + mapping.rename[oldName];
+
+  this.pushResult({
+    result: _.isEqual(renames, [expected]),
+    actual: renames,
+    expected: expected,
+    message: 'RENAME'
+  });
+};
+
+QUnit.assert.migration = function(name){
+  this.pushResult({
+    result: _.isEqual(migrations, [name]),
+    actual: migrations,
+    expected: name,
+    message: 'MIGRATION'
+  });
+};
 
 /**
  * Intercepts text written to `stdout`.
@@ -67,8 +110,23 @@ function renameText(name) {
 
 /*----------------------------------------------------------------------------*/
 
+
+configure({
+  log: _.noop,
+
+  renameMessage: function(rename){
+    renames.push(rename.oldName + ' → ' + rename.newName);
+  },
+
+  migrateMessage: function(migration){
+    migrations.push(migration.name);
+  }
+});
+
 QUnit.testStart(function() {
   logs.length = 0;
+  renames.length = 0;
+  migrations.length = 0;
 });
 
 QUnit.module('lodash-migrate');
