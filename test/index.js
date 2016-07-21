@@ -163,11 +163,11 @@ QUnit.module('mutator methods');
 QUnit.test('should clone arguments before invoking methods', function(assert) {
   var array = [1, 2, 3];
 
-  old.remove(array, function(value) {
-    return value == 2;
+  old.remove(array, function(value, index) {
+    return index == 0;
   });
 
-  assert.deepEqual(logs, []);
+  assert.deepEqual(array, [2, 3]);
 });
 
 QUnit.test('should not double up on value mutations', function(assert) {
