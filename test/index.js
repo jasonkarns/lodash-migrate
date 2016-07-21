@@ -320,16 +320,6 @@ QUnit.module('logging');
     assert.migration('max');
   });
 
-  QUnit.test('should log a specific message once', function(assert) {
-    var foo = new Foo('a');
-
-    old.functions(foo);
-    assert.migration('functions');
-
-    old.functions(foo);
-    assert.migration('functions');
-  });
-
   QUnit.test('should not log when both lodashes produce uncomparable values', function(assert) {
     function Bar(a) { this.a = a; }
     var counter = 0;
@@ -347,6 +337,30 @@ QUnit.module('logging');
     assert.noWarnings();
   });
 }());
+
+QUnit.module('default logging function', {
+  before: function(){
+    this.logs = [];
+    this.original_write = process.stdout.write;
+
+    process.stdout.write = function(message) {
+      this.logs.push(message);
+    }.bind(this);
+  },
+  after: function(){
+    process.stdout.write = this.original_write;
+  }
+}, function(){
+  var config = require('../lib/default-config');
+
+  QUnit.test('should log a specific message only once', function(assert) {
+    config.log('foo');
+    config.log('bar');
+    config.log('foo');
+
+    assert.deepEqual(this.logs, ['foo\n', 'bar\n'])
+  });
+});
 
 QUnit.module('default migration template', function(){
   var reColor = /\x1b\[\d+m/g;
