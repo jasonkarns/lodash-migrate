@@ -186,31 +186,35 @@ QUnit.module('missing methods');
 
 QUnit.test('should not error on legacy `_.callback` use', function(assert) {
   old.callback('x');
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 QUnit.test('should not error on legacy `_.contains` use', function(assert) {
   old([1, 2, 3]).contains(2);
-  assert.deepEqual(logs, [renameText('contains')]);
+
+  assert.rename('contains');
+  assert.noMigrations();
 });
 
 QUnit.test('should not error on legacy `_.indexBy` use', function(assert) {
   old({ 'a': 'x' }).indexBy(_.identity).value();
 
-  assert.deepEqual(logs, [renameText('indexBy')]);
+  // TODO assert.rename('indexBy');
+  assert.noMigrations();
 });
 
 QUnit.test('should not error on legacy `_#run` use', function(assert) {
   old(1).run();
-  assert.deepEqual(logs, [renameText('run')]);
+
+  assert.rename('run');
+  assert.noMigrations();
 });
 
 QUnit.test('should not error on legacy `_.trunc` use', function(assert) {
-  var string = 'abcdef',
-    expected = [renameText('trunc'), migrateText('trunc', [string, 3], '...', 'abcdef')];
+  old('abcdef').trunc(3);
 
-  old(string).trunc(3);
-  assert.deepEqual(logs, expected);
+  assert.rename('trunc');
+  assert.migration('trunc');
 });
 
 /*----------------------------------------------------------------------------*/
@@ -247,7 +251,7 @@ QUnit.module('old.defer');
 
 QUnit.test('should not log', function(assert) {
   old.defer(_.identity);
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -256,7 +260,7 @@ QUnit.module('old.delay');
 
 QUnit.test('should not log', function(assert) {
   old.delay(_.identity, 1);
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -265,7 +269,7 @@ QUnit.module('old.mixin');
 
 QUnit.test('should not log', function(assert) {
   old.mixin();
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -274,7 +278,7 @@ QUnit.module('old.now');
 
 QUnit.test('should not log', function(assert) {
   old.now();
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -301,7 +305,7 @@ QUnit.test('should accept a `context` argument', function(assert) {
 
 QUnit.test('should not log', function(assert) {
   old.runInContext();
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 QUnit.test('should wrap results', function(assert) {
@@ -345,7 +349,7 @@ QUnit.module('old.uniqueId');
 
 QUnit.test('should not log', function(assert) {
   old.uniqueId();
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -354,7 +358,7 @@ QUnit.module('old#valueOf');
 
 QUnit.test('should not log', function(assert) {
   old([1]).valueOf();
-  assert.deepEqual(logs, []);
+  assert.noWarnings();
 });
 
 /*----------------------------------------------------------------------------*/
@@ -368,22 +372,18 @@ QUnit.module('logging');
   Foo.prototype.$ = function() {};
 
   QUnit.test('should log when using unsupported static API', function(assert) {
-    var objects = [{ 'b': 1 }, { 'b': 2 }, { 'b': 3 }],
-      expected = [migrateText('max', [objects, 'b'], objects[2], objects[0])];
-
-    old.max(objects, 'b');
-    assert.deepEqual(logs, expected);
+    old.max([{ 'b': 1 }, { 'b': 2 }, { 'b': 3 }], 'b');
+    assert.migration('max');
   });
 
   QUnit.test('should log a specific message once', function(assert) {
-    var foo = new Foo('a'),
-      expected = [migrateText('functions', [foo], ['a', '$'], ['a'])];
+    var foo = new Foo('a');
 
     old.functions(foo);
-    assert.deepEqual(logs, expected);
+    assert.migration('functions');
 
     old.functions(foo);
-    assert.deepEqual(logs, expected);
+    assert.migration('functions');
   });
 
   QUnit.test('should not log when both lodashes produce uncomparable values', function(assert) {
@@ -394,13 +394,13 @@ QUnit.module('logging');
       return new Bar(counter++);
     });
 
-    assert.deepEqual(logs, []);
+    assert.noWarnings();
 
     old.curry(function(a, b, c) {
       return [a, b, c];
     });
 
-    assert.deepEqual(logs, []);
+    assert.noWarnings();
   });
 
   QUnit.test('should not include ANSI escape codes in logs when in the browser', function(assert) {
