@@ -56,58 +56,6 @@ QUnit.assert.migration = function(name){
   });
 };
 
-/**
- * Intercepts text written to `stdout`.
- *
- * @private
- * @param {...string} text The test to log.
- */
-process.stdout.write = _.wrap(_.bind(process.stdout.write, process.stdout), _.rest(function(func, args) {
-  if (_.startsWith(args[0], 'lodash-migrate:')) {
-    logs.push(_.trim(args[0]));
-  } else {
-    func.apply(null, args);
-  }
-}));
-
-/**
- * Creates a simulated lodash-migrate log entry.
- *
- * @private
- * @param {string} name The name of the method called.
- * @param {Array} args The arguments provided to the method called.
- * @param {*} oldResult The result from the older version of lodash.
- * @param {*} newResult The result from the newer version of lodash.
- * @returns {string} Returns the simulated log entry.
- */
-function migrateText(name, args, oldResult, newResult) {
-  return [
-    'lodash-migrate: _.' + name + '(' + util.truncate(
-      util.inspect(args)
-      .match(/^\[\s*([\s\S]*?)\s*\]$/)[1]
-      .replace(/\n */g, ' ')
-    ) + ')',
-  '  v' + old.VERSION + ' => ' + util.truncate(util.inspect(oldResult)),
-  '  v' + _.VERSION   + ' => ' + util.truncate(util.inspect(newResult))
-  ].join('\n');
-}
-
-/**
- * Creates a simulated rename log entry.
- *
- * @private
- * @param {string} name The name of the method called.
- * @returns {string} Returns the simulated log entry.
- */
-function renameText(name) {
-  var newName = mapping.rename[name] || name;
-  return [
-    'lodash-migrate: Method renamed',
-    '  v' + old.VERSION + ' => _.' + name,
-    '  v' + _.VERSION   + ' => _.' + newName
-  ].join('\n');
-}
-
 /*----------------------------------------------------------------------------*/
 
 
@@ -124,7 +72,6 @@ configure({
 });
 
 QUnit.testStart(function() {
-  logs.length = 0;
   renames.length = 0;
   migrations.length = 0;
 });
@@ -310,11 +257,11 @@ QUnit.test('should not log', function(assert) {
 
 QUnit.test('should wrap results', function(assert) {
   var lodash = old.runInContext(),
-    objects = [{ 'a': 1 }, { 'a': 2 }, { 'a': 3 }],
-    expected = migrateText('max', [objects, 'a'], objects[2], objects[0]);
+    objects = [{ 'a': 1 }, { 'a': 2 }, { 'a': 3 }];
 
   lodash.max(objects, 'a');
-  assert.strictEqual(_.last(logs), expected);
+  // assert.strictEqual(_.last(logs), expected);
+  assert.migration('max');
 });
 
 /*----------------------------------------------------------------------------*/
