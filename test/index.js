@@ -237,7 +237,6 @@ QUnit.test('should wrap results', function(assert) {
     objects = [{ 'a': 1 }, { 'a': 2 }, { 'a': 3 }];
 
   lodash.max(objects, 'a');
-  // assert.strictEqual(_.last(logs), expected);
   assert.migration('max');
 });
 
