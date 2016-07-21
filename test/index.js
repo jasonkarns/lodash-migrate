@@ -346,45 +346,45 @@ QUnit.module('logging');
 
     assert.noWarnings();
   });
+}());
 
-  QUnit.module('default migration template', function(){
-    var reColor = /\x1b\[\d+m/g;
+QUnit.module('default migration template', function(){
+  var reColor = /\x1b\[\d+m/g;
 
-    QUnit.test('should include ANSI escape codes', function(assert) {
+  QUnit.test('should include ANSI escape codes', function(assert) {
+    var config = require('../lib/default-config');
+
+    assert.ok(reColor.test(config.migrateMessage({
+      name: 'fake', args: [1,2,3],
+      oldVersion: 'OLD', newVersion: 'NEW',
+      oldResult: 'old results', newResult: 'new results'
+    })));
+  });
+
+  QUnit.module('in browser', {
+    beforeEach: function(){
+      [ '../lib/default-config', '../lib/util' ].forEach(function clearRequireCache(id) {
+        delete require.cache[require.resolve(id)];
+      });
+
+      global.document = {}; // pretend in browser
+    },
+    afterEach: function(){
+      delete global.document;
+    }
+  }, function(){
+
+    QUnit.test('should not include ANSI escape codes', function(assert) {
       var config = require('../lib/default-config');
 
-      assert.ok(reColor.test(config.migrateTemplate({
+      assert.notOk(reColor.test(config.migrateMessage({
         name: 'fake', args: [1,2,3],
         oldVersion: 'OLD', newVersion: 'NEW',
         oldResult: 'old results', newResult: 'new results'
       })));
     });
-
-    QUnit.module('in browser', {
-      beforeEach: function(){
-        [ '../lib/default-config', '../lib/util' ].forEach(function clearRequireCache(id) {
-          delete require.cache[require.resolve(id)];
-        });
-
-        global.document = {}; // pretend in browser
-      },
-      afterEach: function(){
-        delete global.document;
-      }
-    }, function(){
-
-      QUnit.test('should not include ANSI escape codes', function(assert) {
-        var config = require('../lib/default-config');
-
-        assert.notOk(reColor.test(config.migrateTemplate({
-          name: 'fake', args: [1,2,3],
-          oldVersion: 'OLD', newVersion: 'NEW',
-          oldResult: 'old results', newResult: 'new results'
-        })));
-      });
-    });
   });
-}());
+});
 
 /*----------------------------------------------------------------------------*/
 
